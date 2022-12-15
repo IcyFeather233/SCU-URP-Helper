@@ -1,7 +1,5 @@
 from PySide2.QtUiTools import QUiLoader
 
-from modules.selectRes import urp_selectRes
-
 
 
 class SelectedWin:
