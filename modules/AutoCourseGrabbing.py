@@ -2,9 +2,20 @@ import json
 import time
 
 import requests.exceptions
+from PySide2.QtCore import QThread
 from PySide2.QtWidgets import QMessageBox, QTableWidgetItem
 
 from modules.utils import *
+
+class Thread_start(QThread):
+    def __init__(self, sself):
+        super().__init__()
+        self.sself = sself
+        self.course_grabbing = sself.course_grabbing
+
+    def run(self) -> None:
+        self.course_grabbing.start(self.sself)
+
 
 
 class AutoCourseGrabbing:
@@ -16,6 +27,16 @@ class AutoCourseGrabbing:
         self.data_list = []
 
     def show_course_in_table(self, data_list, sself):
+        """
+        显示课程信息
+        :param data_list:
+        :param sself:
+        :return:
+        """
+        if not isinstance(data_list,list):
+            data_list = [data_list]
+        print(data_list)
+        sself.ui.table.setRowCount(len(data_list))
         idx = 0
         for classData in data_list:
             # 课程序号 ---------------------------------
@@ -74,6 +95,7 @@ class AutoCourseGrabbing:
                 classTech = str(classData['skjs'][0:9])
             except (ValueError, TypeError, Exception):
                 classTech = "未知教师"
+
             sself.ui.table.setItem(idx, 0, QTableWidgetItem(classUUID))
             sself.ui.table.setItem(idx, 1, QTableWidgetItem(className))
             sself.ui.table.setItem(idx, 2, QTableWidgetItem(classArea))
@@ -87,6 +109,11 @@ class AutoCourseGrabbing:
             idx += 1
 
     def selectRes(self, sself):
+        """
+        选课结果
+        :param sself:
+        :return:
+        """
         try:
             res_data = http_main.get(http_urls_select_res)
         except requests.exceptions.ConnectionError or BaseException:
@@ -128,11 +155,19 @@ class AutoCourseGrabbing:
             idx += 1
 
     def query_course(self, sself):
+        """
+        查询课程
+        :param sself:
+        :return:
+        """
         query_content = sself.ui.query_info.text()
         query_data = {
-            "searchtj": query_content,
-            "xq": 0,
-            "jc": 0,
+            "kkxsh": "",
+            "kch": "",
+            "kcm": query_content,
+            "skjs": "",
+            "xq": "0",
+            "jc": "0",
             "kclbdm": ""
         }
         try:
@@ -156,12 +191,16 @@ class AutoCourseGrabbing:
             print("网络错误")
             QMessageBox.about(sself.ui, '[错误]', '网络错误')
             return -2
-        sself.ui.table.setRowCount(len(data_list))
         self.data_list = data_list
         self.fxid = json.loads(raw_data['yxkclist'])[0]['programPlanNumber']
         self.show_course_in_table(data_list, sself)
 
     def add_course(self, sself):
+        """
+        添加课程
+        :param sself:
+        :return:
+        """
         selected_row = sself.ui.table.selectedItems()
         print("选中的行数")
         selected_row = [e.row() for e in selected_row]
@@ -189,17 +228,26 @@ class AutoCourseGrabbing:
         QMessageBox.about(sself.ui, '[成功]', '成功将' + str(self.numc[sself.ui.query_info.text()]) + '门课程添加进列表')
 
     def start(self, sself):
+        """
+        开始抢课
+        :param sself:
+        :return:
+        """
+        sself.ui.start_btn.setEnabled(False)
+        # 查看当前添加的课程列表
         print(self.data)
         loop_time = sself.ui.time.text()
         if len(self.data) == 0:
             print("[尚未添加课程]:请先添加课程，然后再重新开始抢课")
-            QMessageBox.about(sself.ui, '[提示]', '[尚未添加课程]:请先添加课程，然后再重新开始抢课')
+            # QMessageBox.about(sself.ui, '[提示]', '[尚未添加课程]:请先添加课程，然后再重新开始抢课')
+            sself.communicate.message.emit('[尚未添加课程]:请先添加课程，然后再重新开始抢课')
             return -1
         flag = 0
         count = 0
         begin_time = time.time()
         last_time = time.time()
         while flag == 0:
+            count += 1
             all_time = str((time.time() - begin_time) // 3600) + "时" + str(
                 ((time.time() - begin_time) % 3600) // 60) + "分" + str(((time.time() - begin_time) % 60) // 1) + "秒"
             lunxun = str(int((time.time() - last_time) * 1000))
@@ -208,6 +256,10 @@ class AutoCourseGrabbing:
                   " 总共耗时：" + all_time,
                   " 轮询速度：" + str(lunxun) + "ms/次",
                   " 设定速度：" + str(loop_time) + "s/次")
+            sself.communicate.top_bar.emit(" 当前次数：" + str(count) +
+                  " 总共耗时：" + all_time +
+                  " 轮询速度：" + str(lunxun) + "ms/次")
+
             time.sleep(int(loop_time) - 1)
             try:
                 addles_datr = http_main.get(http_urls_course_select)
@@ -233,7 +285,7 @@ class AutoCourseGrabbing:
                         addles_list = addles_tabs['rwRxkZlList']
                     else:
                         print("网络错误")
-                        QMessageBox.about(sself.ui, '[错误]', '网络错误')
+                        sself.communicate.message.emit('网络错误')
                         return -2
                     addles_nums = 0
                     for addles_loop in addles_list:
@@ -247,6 +299,7 @@ class AutoCourseGrabbing:
                                     and self.data[addles_name]['dat2'][addles_tttp] == addles_loop['jasm'] \
                                     and self.data[addles_name]['dat3'][addles_tttp] == addles_loop['skjs'] \
                                     and self.data[addles_name]['dat4'][addles_tttp] == addles_loop['kxh']:
+                                # print(addles_loop)
                                 self.show_course_in_table(addles_loop, sself)
                                 if int(addles_loop['bkskyl']) > 0:
                                     zxyk_name = ""
@@ -276,12 +329,14 @@ class AutoCourseGrabbing:
                                         continue
                                     if addles_data.text.find("ok") != -1:
                                         print(addles_loop['kcm'] + "抢课成功")
-                                        QMessageBox.about(sself.ui, '[成功]', addles_loop['kcm'] + '抢课成功')
+                                        # QMessageBox.about(sself.ui, '[成功]', addles_loop['kcm'] + '抢课成功')
+                                        sself.communicate.message.emit(addles_loop['kcm'] + '抢课成功')
                                         self.data.pop(addles_name)
                                         data_change = True
                                     else:
                                         print("抢课失败")
-                                        QMessageBox.about(sself.ui, '[失败]', addles_loop['kcm'] + '抢课失败')
+                                        # QMessageBox.about(sself.ui, '[失败]', addles_loop['kcm'] + '抢课失败')
+                                        sself.communicate.message.emit(addles_loop['kcm'] + '抢课失败')
                                         time.sleep(5)
                                         flag = 0
                                         break
@@ -302,12 +357,19 @@ class AutoCourseGrabbing:
                 return -1
             except requests.exceptions.ConnectionError:
                 print("网络错误")
-                QMessageBox.about(sself.ui, '[错误]', '网络错误')
+                # QMessageBox.about(sself.ui, '[错误]', '网络错误')
+                sself.communicate.message.emit('网络错误')
                 continue
         print("抢课全部结束")
-        QMessageBox.about(sself.ui, '[成功]', '抢课全部结束')
+        # QMessageBox.about(sself.ui, '[成功]', '抢课全部结束')
+        sself.communicate.message.emit('抢课全部结束')
 
     def delete(self, sself):
+        """
+        退课
+        :param sself:
+        :return:
+        """
         selected_row = sself.ui.table.selectedItems()
         print("选中的行数")
         selected_row = [e.row() for e in selected_row]

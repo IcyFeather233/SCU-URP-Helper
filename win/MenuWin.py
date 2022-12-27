@@ -17,17 +17,29 @@ class MenuWin:
 
 
     def go_selected(self):
+        """
+        已选课程
+        :return:
+        """
         global se_win
         se_win = SelectedWin(self)
         se_win.ui.show()
 
 
     def go_add(self):
+        """
+        添加课程
+        :return:
+        """
         global add_win
         add_win = AddWin(self)
         add_win.ui.show()
 
     def go_start(self):
+        """
+        开始抢课
+        :return:
+        """
         global start_win
         start_win = StartWin(self)
         start_win.ui.show()

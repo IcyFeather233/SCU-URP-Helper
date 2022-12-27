@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>60</y>
+     <y>110</y>
      <width>1101</width>
-     <height>531</height>
+     <height>481</height>
     </rect>
    </property>
   </widget>
@@ -75,6 +75,25 @@
      <family>微软雅黑</family>
      <pointsize>16</pointsize>
     </font>
+   </property>
+  </widget>
+  <widget class="QLabel" name="running_info">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>70</y>
+     <width>1081</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>宋体</family>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>当前次数：           总共耗时：           轮询速度：  </string>
    </property>
   </widget>
  </widget>
